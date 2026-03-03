@@ -9,9 +9,9 @@ from datetime import datetime
 
 class PythOS:
 
-    VERSION = "1.3.1"
+    VERSION = "1.3.2"
 
-    UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/version.txt"
+    UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOSversion.txt"
     UPDATE_SCRIPT_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOS_EN.py"
 
     def __init__(self):
@@ -40,7 +40,7 @@ class PythOS:
 
         self.load_notes()
 
-    # ================= VERSION =================
+    # ================= VERSION SYSTEM =================
 
     def parse_version(self, v):
         return tuple(map(int, v.split(".")))
@@ -132,7 +132,7 @@ class PythOS:
         curses.curs_set(1)
         stdscr.move(3 + self.cursor_y - self.scroll_offset, 2 + self.cursor_x)
 
-    # ================= LOOP =================
+    # ================= MAIN LOOP =================
 
     def run(self, stdscr):
         curses.curs_set(0)
@@ -170,7 +170,7 @@ class PythOS:
             stdscr.refresh()
             key = stdscr.getch()
 
-            # Manual update
+            # Update manual
             if key in (ord('u'), ord('U')) and self.remote_version:
                 local = self.parse_version(self.VERSION)
                 remote = self.parse_version(self.remote_version)
