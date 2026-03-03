@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import curses
 import pickle
 import os
@@ -65,7 +67,10 @@ class PythOS:
         if os.path.exists("userconfig.pkl"):
             try:
                 with open("userconfig.pkl", "rb") as f:
-                    self.user = pickle.load(f)
+                    try:
+                        self.user = pickle.load(f)
+                    except EOFError:
+                        self.user = {"name": "", "birthday": ""}
             except:
                 self.user = {"name": "", "birthday": ""}
 
@@ -281,9 +286,9 @@ class PythOS:
         curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
         curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
 
-        latest = self.check_for_updates()
-        if latest:
-            self.apply_update(latest)
+        # latest = self.check_for_updates()
+        # if latest:
+            # self.apply_update(latest)
 
         self.splash(stdscr)
         self.system_check(stdscr)
@@ -328,8 +333,13 @@ class PythOS:
 
 
 def main():
-    osys = PythOS()
-    curses.wrapper(osys.run)
+    try:
+        osys = PythOS()
+        curses.wrapper(osys.run)
+    except Exception as e:
+        print("CRASH DETECTED:")
+        print(e)
+        input("Press ENTER to exit...")
 
 
 if __name__ == "__main__":
