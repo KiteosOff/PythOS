@@ -13,7 +13,7 @@ if platform.system() == "Windows":
 
 class PythOS:
 
-    VERSION = "1.3.9"
+    VERSION = "1.4.0"
 
     UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOSversion.txt"
     UPDATE_SCRIPT_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOS_EN.py"
@@ -24,6 +24,7 @@ class PythOS:
             "Timer",
             "Calculator",
             "User Config",
+            "Check for updates",
             "About",
             "Exit"
         ]
@@ -32,13 +33,11 @@ class PythOS:
         self.user = {"name": "", "birthday": ""}
         self.load_user()
 
-        self.updated_flag = False
-
     # ================= SOUND =================
 
     def soft_beep(self):
         if platform.system() == "Windows":
-            winsound.Beep(800, 40)
+            winsound.Beep(900, 30)
         else:
             curses.beep()
 
@@ -52,12 +51,12 @@ class PythOS:
 
     def fatal_sound(self):
         if platform.system() == "Windows":
-            winsound.Beep(400, 150)
-            time.sleep(0.1)
-            winsound.Beep(300, 300)
+            winsound.Beep(1200, 200)
+            time.sleep(0.05)
+            winsound.Beep(1500, 400)
         else:
             curses.beep()
-            time.sleep(0.1)
+            time.sleep(0.05)
             curses.beep()
 
     # ================= FILES =================
@@ -85,27 +84,23 @@ class PythOS:
 
     def check_for_updates(self):
         try:
-            with urllib.request.urlopen(self.UPDATE_VERSION_URL, timeout=3) as response:
-                latest_version = response.read().decode().strip()
-
-            if latest_version != self.VERSION:
-                return latest_version
+            with urllib.request.urlopen(self.UPDATE_VERSION_URL, timeout=3) as r:
+                latest = r.read().decode().strip()
+            if latest != self.VERSION:
+                return latest
         except:
             return None
-
         return None
 
-    def apply_update(self, latest_version):
+    def apply_update(self, latest):
         try:
             self.backup_script()
-
-            with urllib.request.urlopen(self.UPDATE_SCRIPT_URL, timeout=5) as response:
-                new_code = response.read().decode()
+            with urllib.request.urlopen(self.UPDATE_SCRIPT_URL, timeout=5) as r:
+                code = r.read().decode()
 
             with open(__file__, "w", encoding="utf-8") as f:
-                f.write(new_code)
+                f.write(code)
 
-            self.updated_flag = True
             os.execv(sys.executable, ['python'] + sys.argv)
 
         except:
@@ -116,14 +111,12 @@ class PythOS:
     def splash(self, stdscr):
 
         height, width = stdscr.getmaxyx()
-
         today = time.strftime("%d/%m")
         is_birthday = (
             self.user["birthday"] == today and self.user["name"]
         )
 
         color = curses.color_pair(1) if is_birthday else curses.A_NORMAL
-
         text1 = "Welcome to"
         title = "PythOS"
 
@@ -131,19 +124,15 @@ class PythOS:
 
         for i in range(4):
             stdscr.clear()
-
             stdscr.addstr(height//2 - 1,
                           (width - len(text1))//2,
                           text1,
                           color)
-
             animated = "=" * i + " " + title + " " + "=" * i
-
             stdscr.addstr(height//2,
                           (width - len(animated))//2,
                           animated,
                           color | curses.A_BOLD)
-
             stdscr.refresh()
             time.sleep(0.3)
 
@@ -153,90 +142,27 @@ class PythOS:
 
     def system_check(self, stdscr):
 
-        height, width = stdscr.getmaxyx()
-
-        checks = [
-            "Checking notes file...",
-            "Checking user config...",
-            "Checking write permissions...",
-            "Checking update server...",
-            "Verifying core..."
-        ]
-
-        success = True
-
-        for i, check in enumerate(checks):
-
-            stdscr.clear()
-
-            percent = int((i / len(checks)) * 100)
-            bar_length = 20
-            filled = int((i / len(checks)) * bar_length)
-            bar = "█" * filled + "░" * (bar_length - filled)
-
-            stdscr.addstr(height//2 - 2,
-                          (width - len("System Check"))//2,
-                          "System Check",
-                          curses.A_BOLD)
-
-            stdscr.addstr(height//2,
-                          (width - len(check))//2,
-                          check)
-
-            stdscr.addstr(height//2 + 2,
-                          (width - len(bar) - 6)//2,
-                          f"[{bar}] {percent}%")
-
-            stdscr.refresh()
-            time.sleep(0.3)
-
-            try:
-                if i == 0:
-                    if not os.path.exists("notes.pkl"):
-                        open("notes.pkl", "wb").close()
-
-                elif i == 1:
-                    if not os.path.exists("userconfig.pkl"):
-                        open("userconfig.pkl", "wb").close()
-
-                elif i == 2:
-                    with open("test.tmp", "w") as f:
-                        f.write("ok")
-                    os.remove("test.tmp")
-
-                elif i == 3:
-                    urllib.request.urlopen(self.UPDATE_VERSION_URL, timeout=2)
-
-                elif i == 4:
-                    if not os.path.exists(__file__):
-                        success = False
-
-                self.soft_beep()
-
-            except:
-                success = False
-
         stdscr.clear()
-        bar = "█" * 20
-
-        stdscr.addstr(height//2,
-                      (width - 28)//2,
-                      f"[{bar}] 100%")
-
-        if success:
-            stdscr.addstr(height//2 + 2,
-                          (width - 9)//2,
-                          "SYSTEM OK",
-                          curses.color_pair(3))
-        else:
-            stdscr.addstr(height//2 + 2,
-                          (width - 14)//2,
-                          "BOOT FAILURE",
-                          curses.color_pair(4))
-            self.fatal_sound()
-
+        stdscr.addstr(2, 2, "System check...", curses.A_BOLD)
         stdscr.refresh()
-        time.sleep(1.5)
+        time.sleep(0.8)
+
+        try:
+            if not os.path.exists("notes.pkl"):
+                open("notes.pkl", "wb").close()
+
+            if not os.path.exists("userconfig.pkl"):
+                open("userconfig.pkl", "wb").close()
+
+            with open("test.tmp", "w") as f:
+                f.write("ok")
+            os.remove("test.tmp")
+
+        except:
+            stdscr.addstr(4, 2, "BOOT FAILURE", curses.color_pair(4))
+            self.fatal_sound()
+            stdscr.refresh()
+            time.sleep(2)
 
     # ================= TIMER =================
 
@@ -248,7 +174,6 @@ class PythOS:
         stdscr.timeout(100)
 
         while True:
-
             stdscr.clear()
             height, width = stdscr.getmaxyx()
 
@@ -272,17 +197,48 @@ class PythOS:
 
             if key == 27:
                 break
-
-            elif key in (10, 13) and not running:
+            elif key in (10, 13, curses.KEY_ENTER) and not running:
                 running = True
                 start_time = time.time() - seconds
-
             elif key == 32 and running:
                 running = False
-
             elif key in (ord('r'), ord('R')):
                 running = False
                 seconds = 0
+
+    # ================= CALCULATOR =================
+
+    def calculator_screen(self, stdscr):
+
+        curses.echo()
+        curses.curs_set(1)
+
+        while True:
+            stdscr.clear()
+            stdscr.addstr(2, 2, "Calculator (type 'exit' to leave)",
+                          curses.color_pair(3) | curses.A_BOLD)
+            stdscr.addstr(4, 2, ">>> ")
+
+            stdscr.refresh()
+            expr = stdscr.getstr(4, 6, 40).decode()
+
+            if expr.lower() == "exit":
+                break
+
+            try:
+                result = eval(expr)
+                stdscr.addstr(6, 2, f"= {result}",
+                              curses.color_pair(3))
+            except:
+                stdscr.addstr(6, 2, "Invalid expression",
+                              curses.color_pair(4))
+                self.soft_beep()
+
+            stdscr.refresh()
+            stdscr.getch()
+
+        curses.noecho()
+        curses.curs_set(0)
 
     # ================= USER CONFIG =================
 
@@ -290,22 +246,22 @@ class PythOS:
 
         curses.echo()
         curses.curs_set(1)
-        stdscr.clear()
 
-        stdscr.addstr(2, 2, "User Configuration", curses.color_pair(2) | curses.A_BOLD)
+        stdscr.clear()
+        stdscr.addstr(2, 2, "User Configuration",
+                      curses.color_pair(2) | curses.A_BOLD)
 
         stdscr.addstr(4, 2, "Name: ")
-        name = stdscr.getstr(4, 8, 20).decode("utf-8")
+        name = stdscr.getstr(4, 8, 20).decode()
 
         stdscr.addstr(6, 2, "Birthday (DD/MM): ")
-        birthday = stdscr.getstr(6, 22, 5).decode("utf-8")
+        birthday = stdscr.getstr(6, 22, 5).decode()
 
         curses.noecho()
         curses.curs_set(0)
 
         if name:
             self.user["name"] = name
-
         if birthday and len(birthday) == 5 and birthday[2] == "/":
             self.user["birthday"] = birthday
 
@@ -317,14 +273,13 @@ class PythOS:
 
         curses.curs_set(0)
         curses.start_color()
+        stdscr.keypad(True)
 
         curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)
         curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_BLACK)
         curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
         curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
-        curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-        curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
-        curses.init_pair(7, curses.COLOR_CYAN, curses.COLOR_BLACK)
+        curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
 
         latest = self.check_for_updates()
         if latest:
@@ -333,48 +288,41 @@ class PythOS:
         self.splash(stdscr)
         self.system_check(stdscr)
 
-        stdscr.timeout(100)
-
         while True:
 
             stdscr.clear()
-            stdscr.addstr(1, 2, f"PythOS {self.VERSION}", curses.A_BOLD)
+            stdscr.addstr(1, 2, f"PythOS {self.VERSION}",
+                          curses.A_BOLD)
 
-            colors = {
-                "Notes": 1,
-                "Timer": 2,
-                "Calculator": 3,
-                "User Config": 2,
-                "About": 6,
-                "Exit": 4
-            }
-
-            for idx, item in enumerate(self.menu_items):
-                color = curses.color_pair(colors[item])
-                if idx == self.current_selection:
-                    stdscr.addstr(3 + idx, 4, item,
+            for i, item in enumerate(self.menu_items):
+                color = curses.color_pair((i % 5) + 1)
+                if i == self.current_selection:
+                    stdscr.addstr(3+i, 4, item,
                                   color | curses.A_REVERSE)
                 else:
-                    stdscr.addstr(3 + idx, 4, item, color)
+                    stdscr.addstr(3+i, 4, item, color)
 
             stdscr.refresh()
             key = stdscr.getch()
 
             if key == curses.KEY_UP and self.current_selection > 0:
                 self.current_selection -= 1
-
             elif key == curses.KEY_DOWN and self.current_selection < len(self.menu_items)-1:
                 self.current_selection += 1
+            elif key in (10, 13, curses.KEY_ENTER):
 
-            elif key in (10, 13):
                 choice = self.menu_items[self.current_selection]
 
                 if choice == "Timer":
                     self.timer_screen(stdscr)
-
+                elif choice == "Calculator":
+                    self.calculator_screen(stdscr)
                 elif choice == "User Config":
                     self.edit_user(stdscr)
-
+                elif choice == "Check for updates":
+                    latest = self.check_for_updates()
+                    if latest:
+                        self.apply_update(latest)
                 elif choice == "Exit":
                     return
 
