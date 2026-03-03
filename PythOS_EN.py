@@ -10,8 +10,8 @@ class PythOS:
 
     VERSION = "1.3.4"
 
-    UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOSversion.txt"
     UPDATE_SCRIPT_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOS_EN.py"
+    UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOSversion.txt"
 
     def __init__(self):
         self.state = "menu"
@@ -233,3 +233,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
