@@ -7,20 +7,18 @@ import sys
 import shutil
 import platform
 
-# Windows sound support
 if platform.system() == "Windows":
     import winsound
 
 
 class PythOS:
 
-    VERSION = "1.3.8"
+    VERSION = "1.3.9"
 
     UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOSversion.txt"
     UPDATE_SCRIPT_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOS_EN.py"
 
     def __init__(self):
-
         self.menu_items = [
             "Notes",
             "Timer",
@@ -32,23 +30,15 @@ class PythOS:
 
         self.current_selection = 0
         self.user = {"name": "", "birthday": ""}
-
-        self.status_message = ""
-        self.status_timer = 0
-        self.status_color = 5
-
-        # Timer
-        self.timer_running = False
-        self.timer_seconds = 0
-        self.timer_start = 0
-
         self.load_user()
+
+        self.updated_flag = False
 
     # ================= SOUND =================
 
     def soft_beep(self):
         if platform.system() == "Windows":
-            winsound.Beep(700, 40)
+            winsound.Beep(800, 40)
         else:
             curses.beep()
 
@@ -78,11 +68,48 @@ class PythOS:
                 with open("userconfig.pkl", "rb") as f:
                     self.user = pickle.load(f)
             except:
-                pass
+                self.user = {"name": "", "birthday": ""}
 
     def save_user(self):
         with open("userconfig.pkl", "wb") as f:
             pickle.dump(self.user, f)
+
+    # ================= UPDATE =================
+
+    def backup_script(self):
+        shutil.copyfile(__file__, __file__ + ".bak")
+
+    def restore_backup(self):
+        if os.path.exists(__file__ + ".bak"):
+            shutil.copyfile(__file__ + ".bak", __file__)
+
+    def check_for_updates(self):
+        try:
+            with urllib.request.urlopen(self.UPDATE_VERSION_URL, timeout=3) as response:
+                latest_version = response.read().decode().strip()
+
+            if latest_version != self.VERSION:
+                return latest_version
+        except:
+            return None
+
+        return None
+
+    def apply_update(self, latest_version):
+        try:
+            self.backup_script()
+
+            with urllib.request.urlopen(self.UPDATE_SCRIPT_URL, timeout=5) as response:
+                new_code = response.read().decode()
+
+            with open(__file__, "w", encoding="utf-8") as f:
+                f.write(new_code)
+
+            self.updated_flag = True
+            os.execv(sys.executable, ['python'] + sys.argv)
+
+        except:
+            self.restore_backup()
 
     # ================= SPLASH =================
 
@@ -136,16 +163,15 @@ class PythOS:
             "Verifying core..."
         ]
 
-        total = len(checks)
         success = True
 
         for i, check in enumerate(checks):
 
             stdscr.clear()
 
-            percent = int((i / total) * 100)
+            percent = int((i / len(checks)) * 100)
             bar_length = 20
-            filled = int((i / total) * bar_length)
+            filled = int((i / len(checks)) * bar_length)
             bar = "█" * filled + "░" * (bar_length - filled)
 
             stdscr.addstr(height//2 - 2,
@@ -162,7 +188,7 @@ class PythOS:
                           f"[{bar}] {percent}%")
 
             stdscr.refresh()
-            time.sleep(0.4)
+            time.sleep(0.3)
 
             try:
                 if i == 0:
@@ -216,8 +242,9 @@ class PythOS:
 
     def timer_screen(self, stdscr):
 
-        self.timer_running = False
-        self.timer_seconds = 0
+        running = False
+        seconds = 0
+        start_time = 0
         stdscr.timeout(100)
 
         while True:
@@ -225,11 +252,11 @@ class PythOS:
             stdscr.clear()
             height, width = stdscr.getmaxyx()
 
-            if self.timer_running:
-                self.timer_seconds = int(time.time() - self.timer_start)
+            if running:
+                seconds = int(time.time() - start_time)
 
-            mins = self.timer_seconds // 60
-            secs = self.timer_seconds % 60
+            mins = seconds // 60
+            secs = seconds % 60
             time_str = f"{mins:02}:{secs:02}"
 
             stdscr.addstr(height//2,
@@ -246,16 +273,16 @@ class PythOS:
             if key == 27:
                 break
 
-            elif key == 10 and not self.timer_running:
-                self.timer_running = True
-                self.timer_start = time.time() - self.timer_seconds
+            elif key in (10, 13) and not running:
+                running = True
+                start_time = time.time() - seconds
 
-            elif key == 32 and self.timer_running:
-                self.timer_running = False
+            elif key == 32 and running:
+                running = False
 
             elif key in (ord('r'), ord('R')):
-                self.timer_running = False
-                self.timer_seconds = 0
+                running = False
+                seconds = 0
 
     # ================= USER CONFIG =================
 
@@ -263,33 +290,28 @@ class PythOS:
 
         curses.echo()
         curses.curs_set(1)
-        stdscr.timeout(-1)
-
         stdscr.clear()
-        stdscr.addstr(2, 2, "User Configuration", curses.A_BOLD)
 
-        stdscr.addstr(4, 2, "Enter name: ")
-        stdscr.refresh()
-        name = stdscr.getstr(4, 15, 20).decode("utf-8")
+        stdscr.addstr(2, 2, "User Configuration", curses.color_pair(2) | curses.A_BOLD)
+
+        stdscr.addstr(4, 2, "Name: ")
+        name = stdscr.getstr(4, 8, 20).decode("utf-8")
 
         stdscr.addstr(6, 2, "Birthday (DD/MM): ")
-        stdscr.refresh()
         birthday = stdscr.getstr(6, 22, 5).decode("utf-8")
 
         curses.noecho()
         curses.curs_set(0)
-        stdscr.timeout(100)
 
         if name:
             self.user["name"] = name
 
-        if birthday:
-            if len(birthday) == 5 and birthday[2] == "/":
-                self.user["birthday"] = birthday
+        if birthday and len(birthday) == 5 and birthday[2] == "/":
+            self.user["birthday"] = birthday
 
         self.save_user()
 
-    # ================= MAIN LOOP =================
+    # ================= MAIN =================
 
     def run(self, stdscr):
 
@@ -303,6 +325,10 @@ class PythOS:
         curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)
         curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
         curses.init_pair(7, curses.COLOR_CYAN, curses.COLOR_BLACK)
+
+        latest = self.check_for_updates()
+        if latest:
+            self.apply_update(latest)
 
         self.splash(stdscr)
         self.system_check(stdscr)
@@ -318,7 +344,7 @@ class PythOS:
                 "Notes": 1,
                 "Timer": 2,
                 "Calculator": 3,
-                "User Config": 7,
+                "User Config": 2,
                 "About": 6,
                 "Exit": 4
             }
@@ -340,7 +366,7 @@ class PythOS:
             elif key == curses.KEY_DOWN and self.current_selection < len(self.menu_items)-1:
                 self.current_selection += 1
 
-            elif key == 10:
+            elif key in (10, 13):
                 choice = self.menu_items[self.current_selection]
 
                 if choice == "Timer":
@@ -351,10 +377,6 @@ class PythOS:
 
                 elif choice == "Exit":
                     return
-
-                else:
-                    # Placeholder apps
-                    pass
 
 
 def main():
