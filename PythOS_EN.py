@@ -5,19 +5,21 @@ import time
 import urllib.request
 import sys
 import shutil
+import platform
+
+# Windows sound support
+if platform.system() == "Windows":
+    import winsound
 
 
 class PythOS:
 
-    VERSION = "1.3.7"
+    VERSION = "1.3.8"
 
     UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOSversion.txt"
     UPDATE_SCRIPT_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOS_EN.py"
 
     def __init__(self):
-
-        self.state = "menu"
-        self.current_selection = 0
 
         self.menu_items = [
             "Notes",
@@ -28,7 +30,7 @@ class PythOS:
             "Exit"
         ]
 
-        self.notes = {}
+        self.current_selection = 0
         self.user = {"name": "", "birthday": ""}
 
         self.status_message = ""
@@ -40,25 +42,35 @@ class PythOS:
         self.timer_seconds = 0
         self.timer_start = 0
 
-        self.load_notes()
         self.load_user()
 
-        self.remote_version = None
-        self.update_checked = False
+    # ================= SOUND =================
+
+    def soft_beep(self):
+        if platform.system() == "Windows":
+            winsound.Beep(700, 40)
+        else:
+            curses.beep()
+
+    def futuristic_boot_sound(self):
+        if platform.system() == "Windows":
+            winsound.Beep(600, 80)
+            winsound.Beep(750, 100)
+            winsound.Beep(900, 120)
+        else:
+            curses.beep()
+
+    def fatal_sound(self):
+        if platform.system() == "Windows":
+            winsound.Beep(400, 150)
+            time.sleep(0.1)
+            winsound.Beep(300, 300)
+        else:
+            curses.beep()
+            time.sleep(0.1)
+            curses.beep()
 
     # ================= FILES =================
-
-    def load_notes(self):
-        if os.path.exists("notes.pkl"):
-            try:
-                with open("notes.pkl", "rb") as f:
-                    self.notes = pickle.load(f)
-            except:
-                self.notes = {}
-
-    def save_notes(self):
-        with open("notes.pkl", "wb") as f:
-            pickle.dump(self.notes, f)
 
     def load_user(self):
         if os.path.exists("userconfig.pkl"):
@@ -71,48 +83,6 @@ class PythOS:
     def save_user(self):
         with open("userconfig.pkl", "wb") as f:
             pickle.dump(self.user, f)
-
-    # ================= UPDATE =================
-
-    def parse_version(self, v):
-        return tuple(map(int, v.split(".")))
-
-    def check_update(self):
-        try:
-            with urllib.request.urlopen(self.UPDATE_VERSION_URL, timeout=3) as r:
-                return r.read().decode().strip()
-        except:
-            return None
-
-    def backup_current(self):
-        shutil.copy(__file__, "PythOS_backup.py")
-
-    def restore_backup(self):
-        if os.path.exists("PythOS_backup.py"):
-            shutil.copy("PythOS_backup.py", __file__)
-
-    def download_update(self):
-        try:
-            self.backup_current()
-
-            with urllib.request.urlopen(self.UPDATE_SCRIPT_URL) as r:
-                new_code = r.read().decode()
-
-            with open(__file__, "w", encoding="utf-8") as f:
-                f.write(new_code)
-
-            os.execv(sys.executable, [sys.executable] + sys.argv)
-
-        except:
-            self.restore_backup()
-            self.show_status("Update failed – restored backup", 4)
-
-    # ================= STATUS =================
-
-    def show_status(self, message, color_pair=5):
-        self.status_message = message
-        self.status_timer = 60
-        self.status_color = color_pair
 
     # ================= SPLASH =================
 
@@ -129,6 +99,8 @@ class PythOS:
 
         text1 = "Welcome to"
         title = "PythOS"
+
+        self.futuristic_boot_sound()
 
         for i in range(4):
             stdscr.clear()
@@ -148,7 +120,97 @@ class PythOS:
             stdscr.refresh()
             time.sleep(0.3)
 
-        time.sleep(0.8)
+        time.sleep(0.5)
+
+    # ================= SYSTEM CHECK =================
+
+    def system_check(self, stdscr):
+
+        height, width = stdscr.getmaxyx()
+
+        checks = [
+            "Checking notes file...",
+            "Checking user config...",
+            "Checking write permissions...",
+            "Checking update server...",
+            "Verifying core..."
+        ]
+
+        total = len(checks)
+        success = True
+
+        for i, check in enumerate(checks):
+
+            stdscr.clear()
+
+            percent = int((i / total) * 100)
+            bar_length = 20
+            filled = int((i / total) * bar_length)
+            bar = "█" * filled + "░" * (bar_length - filled)
+
+            stdscr.addstr(height//2 - 2,
+                          (width - len("System Check"))//2,
+                          "System Check",
+                          curses.A_BOLD)
+
+            stdscr.addstr(height//2,
+                          (width - len(check))//2,
+                          check)
+
+            stdscr.addstr(height//2 + 2,
+                          (width - len(bar) - 6)//2,
+                          f"[{bar}] {percent}%")
+
+            stdscr.refresh()
+            time.sleep(0.4)
+
+            try:
+                if i == 0:
+                    if not os.path.exists("notes.pkl"):
+                        open("notes.pkl", "wb").close()
+
+                elif i == 1:
+                    if not os.path.exists("userconfig.pkl"):
+                        open("userconfig.pkl", "wb").close()
+
+                elif i == 2:
+                    with open("test.tmp", "w") as f:
+                        f.write("ok")
+                    os.remove("test.tmp")
+
+                elif i == 3:
+                    urllib.request.urlopen(self.UPDATE_VERSION_URL, timeout=2)
+
+                elif i == 4:
+                    if not os.path.exists(__file__):
+                        success = False
+
+                self.soft_beep()
+
+            except:
+                success = False
+
+        stdscr.clear()
+        bar = "█" * 20
+
+        stdscr.addstr(height//2,
+                      (width - 28)//2,
+                      f"[{bar}] 100%")
+
+        if success:
+            stdscr.addstr(height//2 + 2,
+                          (width - 9)//2,
+                          "SYSTEM OK",
+                          curses.color_pair(3))
+        else:
+            stdscr.addstr(height//2 + 2,
+                          (width - 14)//2,
+                          "BOOT FAILURE",
+                          curses.color_pair(4))
+            self.fatal_sound()
+
+        stdscr.refresh()
+        time.sleep(1.5)
 
     # ================= TIMER =================
 
@@ -156,7 +218,6 @@ class PythOS:
 
         self.timer_running = False
         self.timer_seconds = 0
-
         stdscr.timeout(100)
 
         while True:
@@ -225,12 +286,8 @@ class PythOS:
         if birthday:
             if len(birthday) == 5 and birthday[2] == "/":
                 self.user["birthday"] = birthday
-            else:
-                self.show_status("Invalid birthday format", 4)
-                return
 
         self.save_user()
-        self.show_status("User config saved", 7)
 
     # ================= MAIN LOOP =================
 
@@ -248,12 +305,9 @@ class PythOS:
         curses.init_pair(7, curses.COLOR_CYAN, curses.COLOR_BLACK)
 
         self.splash(stdscr)
+        self.system_check(stdscr)
 
         stdscr.timeout(100)
-
-        if not self.update_checked:
-            self.remote_version = self.check_update()
-            self.update_checked = True
 
         while True:
 
@@ -277,21 +331,8 @@ class PythOS:
                 else:
                     stdscr.addstr(3 + idx, 4, item, color)
 
-            if self.status_timer > 0:
-                h, _ = stdscr.getmaxyx()
-                stdscr.addstr(h - 2, 2,
-                              self.status_message,
-                              curses.color_pair(self.status_color))
-                self.status_timer -= 1
-
             stdscr.refresh()
             key = stdscr.getch()
-
-            if key in (ord('u'), ord('U')) and self.remote_version:
-                local = self.parse_version(self.VERSION)
-                remote = self.parse_version(self.remote_version)
-                if remote > local:
-                    self.download_update()
 
             if key == curses.KEY_UP and self.current_selection > 0:
                 self.current_selection -= 1
@@ -312,7 +353,8 @@ class PythOS:
                     return
 
                 else:
-                    self.show_status("Feature in development", 4)
+                    # Placeholder apps
+                    pass
 
 
 def main():
