@@ -15,7 +15,7 @@ if platform.system() == "Windows":
 
 class PythOS:
 
-    VERSION = "1.4.0"
+    VERSION = "1.4.1"
 
     UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOSversion.txt"
     UPDATE_SCRIPT_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOS_EN.py"
@@ -154,7 +154,8 @@ class PythOS:
 
         try:
             if not os.path.exists("notes.pkl"):
-                open("notes.pkl", "wb").close()
+                with open("notes.pkl", "wb") as f:
+                    pickle.dump([], f)
 
             if not os.path.exists("userconfig.pkl"):
                 open("userconfig.pkl", "wb").close()
@@ -344,3 +345,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
