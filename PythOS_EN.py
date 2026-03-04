@@ -4,9 +4,7 @@ import curses
 import pickle
 import os
 import time
-import urllib.request
 import sys
-import shutil
 import platform
 
 if platform.system() == "Windows":
@@ -17,16 +15,17 @@ class PythOS:
 
     VERSION = "1.4.1"
 
-    UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOSversion.txt"
-    UPDATE_SCRIPT_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOS_EN.py"
-
     def __init__(self):
+        self.base_path = os.path.dirname(os.path.abspath(__file__))
+
+        self.notes_file = os.path.join(self.base_path, "notes.pkl")
+        self.user_file = os.path.join(self.base_path, "userconfig.pkl")
+
         self.menu_items = [
             "Notes",
             "Timer",
             "Calculator",
             "User Config",
-            "Check for updates",
             "About",
             "Exit"
         ]
@@ -43,14 +42,6 @@ class PythOS:
         else:
             curses.beep()
 
-    def futuristic_boot_sound(self):
-        if platform.system() == "Windows":
-            winsound.Beep(600, 80)
-            winsound.Beep(750, 100)
-            winsound.Beep(900, 120)
-        else:
-            curses.beep()
-
     def fatal_sound(self):
         if platform.system() == "Windows":
             winsound.Beep(1200, 200)
@@ -58,90 +49,37 @@ class PythOS:
             winsound.Beep(1500, 400)
         else:
             curses.beep()
-            time.sleep(0.05)
-            curses.beep()
 
     # ================= FILES =================
 
     def load_user(self):
-        if os.path.exists("userconfig.pkl"):
+        if os.path.exists(self.user_file):
             try:
-                with open("userconfig.pkl", "rb") as f:
-                    try:
-                        self.user = pickle.load(f)
-                    except EOFError:
-                        self.user = {"name": "", "birthday": ""}
+                with open(self.user_file, "rb") as f:
+                    self.user = pickle.load(f)
             except:
                 self.user = {"name": "", "birthday": ""}
+        else:
+            self.save_user()
 
     def save_user(self):
-        with open("userconfig.pkl", "wb") as f:
+        with open(self.user_file, "wb") as f:
             pickle.dump(self.user, f)
 
-    # ================= UPDATE =================
+    def load_notes(self):
+        if os.path.exists(self.notes_file):
+            try:
+                with open(self.notes_file, "rb") as f:
+                    return pickle.load(f)
+            except:
+                return []
+        else:
+            self.save_notes([])
+            return []
 
-    def backup_script(self):
-        shutil.copyfile(__file__, __file__ + ".bak")
-
-    def restore_backup(self):
-        if os.path.exists(__file__ + ".bak"):
-            shutil.copyfile(__file__ + ".bak", __file__)
-
-    def check_for_updates(self):
-        try:
-            with urllib.request.urlopen(self.UPDATE_VERSION_URL, timeout=3) as r:
-                latest = r.read().decode().strip()
-            if latest != self.VERSION:
-                return latest
-        except:
-            return None
-        return None
-
-    def apply_update(self, latest):
-        try:
-            self.backup_script()
-            with urllib.request.urlopen(self.UPDATE_SCRIPT_URL, timeout=5) as r:
-                code = r.read().decode()
-
-            with open(__file__, "w", encoding="utf-8") as f:
-                f.write(code)
-
-            os.execv(sys.executable, ['python'] + sys.argv)
-
-        except:
-            self.restore_backup()
-
-    # ================= SPLASH =================
-
-    def splash(self, stdscr):
-
-        height, width = stdscr.getmaxyx()
-        today = time.strftime("%d/%m")
-        is_birthday = (
-            self.user["birthday"] == today and self.user["name"]
-        )
-
-        color = curses.color_pair(1) if is_birthday else curses.A_NORMAL
-        text1 = "Welcome to"
-        title = "PythOS"
-
-        self.futuristic_boot_sound()
-
-        for i in range(4):
-            stdscr.clear()
-            stdscr.addstr(height//2 - 1,
-                          (width - len(text1))//2,
-                          text1,
-                          color)
-            animated = "=" * i + " " + title + " " + "=" * i
-            stdscr.addstr(height//2,
-                          (width - len(animated))//2,
-                          animated,
-                          color | curses.A_BOLD)
-            stdscr.refresh()
-            time.sleep(0.3)
-
-        time.sleep(0.5)
+    def save_notes(self, notes):
+        with open(self.notes_file, "wb") as f:
+            pickle.dump(notes, f)
 
     # ================= SYSTEM CHECK =================
 
@@ -153,22 +91,50 @@ class PythOS:
         time.sleep(0.8)
 
         try:
-            if not os.path.exists("notes.pkl"):
-                with open("notes.pkl", "wb") as f:
-                    pickle.dump([], f)
+            if not os.path.exists(self.notes_file):
+                self.save_notes([])
 
-            if not os.path.exists("userconfig.pkl"):
-                open("userconfig.pkl", "wb").close()
+            if not os.path.exists(self.user_file):
+                self.save_user()
 
-            with open("test.tmp", "w") as f:
-                f.write("ok")
-            os.remove("test.tmp")
-
-        except:
-            stdscr.addstr(4, 2, "BOOT FAILURE", curses.color_pair(4))
-            self.fatal_sound()
+        except Exception as e:
+            stdscr.addstr(4, 2, "Storage Warning", curses.color_pair(4))
+            stdscr.addstr(6, 2, str(e))
             stdscr.refresh()
-            time.sleep(2)
+            stdscr.getch()
+
+    # ================= NOTES =================
+
+    def notes_screen(self, stdscr):
+
+        notes = self.load_notes()
+
+        while True:
+            stdscr.clear()
+            stdscr.addstr(1, 2, "Notes", curses.A_BOLD)
+
+            for i, note in enumerate(notes):
+                stdscr.addstr(3 + i, 4, f"- {note}")
+
+            stdscr.addstr(15, 2, "A=Add  D=Delete last  ESC=Back")
+            stdscr.refresh()
+
+            key = stdscr.getch()
+
+            if key == 27:
+                break
+            elif key in (ord('a'), ord('A')):
+                curses.echo()
+                stdscr.addstr(17, 2, "New note: ")
+                note = stdscr.getstr(17, 12, 50).decode()
+                curses.noecho()
+                if note:
+                    notes.append(note)
+                    self.save_notes(notes)
+            elif key in (ord('d'), ord('D')):
+                if notes:
+                    notes.pop()
+                    self.save_notes(notes)
 
     # ================= TIMER =================
 
@@ -246,33 +212,6 @@ class PythOS:
         curses.noecho()
         curses.curs_set(0)
 
-    # ================= USER CONFIG =================
-
-    def edit_user(self, stdscr):
-
-        curses.echo()
-        curses.curs_set(1)
-
-        stdscr.clear()
-        stdscr.addstr(2, 2, "User Configuration",
-                      curses.color_pair(2) | curses.A_BOLD)
-
-        stdscr.addstr(4, 2, "Name: ")
-        name = stdscr.getstr(4, 8, 20).decode()
-
-        stdscr.addstr(6, 2, "Birthday (DD/MM): ")
-        birthday = stdscr.getstr(6, 22, 5).decode()
-
-        curses.noecho()
-        curses.curs_set(0)
-
-        if name:
-            self.user["name"] = name
-        if birthday and len(birthday) == 5 and birthday[2] == "/":
-            self.user["birthday"] = birthday
-
-        self.save_user()
-
     # ================= MAIN =================
 
     def run(self, stdscr):
@@ -285,13 +224,7 @@ class PythOS:
         curses.init_pair(2, curses.COLOR_CYAN, curses.COLOR_BLACK)
         curses.init_pair(3, curses.COLOR_GREEN, curses.COLOR_BLACK)
         curses.init_pair(4, curses.COLOR_RED, curses.COLOR_BLACK)
-        curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
 
-        # latest = self.check_for_updates()
-        # if latest:
-            # self.apply_update(latest)
-
-        self.splash(stdscr)
         self.system_check(stdscr)
 
         while True:
@@ -301,7 +234,12 @@ class PythOS:
                           curses.A_BOLD)
 
             for i, item in enumerate(self.menu_items):
-                color = curses.color_pair((i % 5) + 1)
+
+                if item == "Exit":
+                    color = curses.color_pair(4)
+                else:
+                    color = curses.color_pair((i % 3) + 1)
+
                 if i == self.current_selection:
                     stdscr.addstr(3+i, 4, item,
                                   color | curses.A_REVERSE)
@@ -319,16 +257,12 @@ class PythOS:
 
                 choice = self.menu_items[self.current_selection]
 
-                if choice == "Timer":
+                if choice == "Notes":
+                    self.notes_screen(stdscr)
+                elif choice == "Timer":
                     self.timer_screen(stdscr)
                 elif choice == "Calculator":
                     self.calculator_screen(stdscr)
-                elif choice == "User Config":
-                    self.edit_user(stdscr)
-                elif choice == "Check for updates":
-                    latest = self.check_for_updates()
-                    if latest:
-                        self.apply_update(latest)
                 elif choice == "Exit":
                     return
 
@@ -345,4 +279,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
