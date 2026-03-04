@@ -6,6 +6,7 @@ import os
 import time
 import sys
 import platform
+import urllib.request
 
 if platform.system() == "Windows":
     import winsound
@@ -13,11 +14,13 @@ if platform.system() == "Windows":
 
 class PythOS:
 
-    VERSION = "1.4.1"
+    VERSION = "1.4.2"
+
+    UPDATE_VERSION_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOSversion.txt"
+    UPDATE_SCRIPT_URL = "https://raw.githubusercontent.com/KiteosOff/PythOS/main/PythOS_EN.py"
 
     def __init__(self):
         self.base_path = os.path.dirname(os.path.abspath(__file__))
-
         self.notes_file = os.path.join(self.base_path, "notes.pkl")
         self.user_file = os.path.join(self.base_path, "userconfig.pkl")
 
@@ -39,14 +42,6 @@ class PythOS:
     def soft_beep(self):
         if platform.system() == "Windows":
             winsound.Beep(900, 30)
-        else:
-            curses.beep()
-
-    def fatal_sound(self):
-        if platform.system() == "Windows":
-            winsound.Beep(1200, 200)
-            time.sleep(0.05)
-            winsound.Beep(1500, 400)
         else:
             curses.beep()
 
@@ -84,7 +79,6 @@ class PythOS:
     # ================= SYSTEM CHECK =================
 
     def system_check(self, stdscr):
-
         stdscr.clear()
         stdscr.addstr(2, 2, "System check...", curses.A_BOLD)
         stdscr.refresh()
@@ -93,10 +87,8 @@ class PythOS:
         try:
             if not os.path.exists(self.notes_file):
                 self.save_notes([])
-
             if not os.path.exists(self.user_file):
                 self.save_user()
-
         except Exception as e:
             stdscr.addstr(4, 2, "Storage Warning", curses.color_pair(4))
             stdscr.addstr(6, 2, str(e))
@@ -123,14 +115,16 @@ class PythOS:
 
             if key == 27:
                 break
+
             elif key in (ord('a'), ord('A')):
                 curses.echo()
                 stdscr.addstr(17, 2, "New note: ")
-                note = stdscr.getstr(17, 12, 50).decode()
+                note = stdscr.getstr(17, 12, 60).decode("utf-8", errors="ignore")
                 curses.noecho()
                 if note:
                     notes.append(note)
                     self.save_notes(notes)
+
             elif key in (ord('d'), ord('D')):
                 if notes:
                     notes.pop()
@@ -192,7 +186,7 @@ class PythOS:
             stdscr.addstr(4, 2, ">>> ")
 
             stdscr.refresh()
-            expr = stdscr.getstr(4, 6, 40).decode()
+            expr = stdscr.getstr(4, 6, 40).decode("utf-8", errors="ignore")
 
             if expr.lower() == "exit":
                 break
@@ -211,6 +205,76 @@ class PythOS:
 
         curses.noecho()
         curses.curs_set(0)
+
+    # ================= USER CONFIG =================
+
+    def user_config_screen(self, stdscr):
+
+        while True:
+            stdscr.clear()
+            stdscr.addstr(2, 2, "User Configuration", curses.A_BOLD)
+
+            stdscr.addstr(4, 4, f"Name: {self.user['name']}")
+            stdscr.addstr(5, 4, f"Birthday: {self.user['birthday']}")
+
+            stdscr.addstr(7, 4, "E = Edit")
+            stdscr.addstr(8, 4, "ESC = Back")
+
+            stdscr.refresh()
+            key = stdscr.getch()
+
+            if key == 27:
+                break
+            elif key in (ord('e'), ord('E')):
+                self.edit_user(stdscr)
+
+    def edit_user(self, stdscr):
+
+        curses.echo()
+        curses.curs_set(1)
+
+        stdscr.clear()
+        stdscr.addstr(2, 2, "Edit User", curses.A_BOLD)
+
+        stdscr.addstr(4, 2, "Name: ")
+        name = stdscr.getstr(4, 8, 20).decode("utf-8", errors="ignore")
+
+        stdscr.addstr(6, 2, "Birthday (DD/MM): ")
+        birthday = stdscr.getstr(6, 22, 5).decode("utf-8", errors="ignore")
+
+        curses.noecho()
+        curses.curs_set(0)
+
+        if name:
+            self.user["name"] = name
+        if birthday and len(birthday) == 5 and birthday[2] == "/":
+            self.user["birthday"] = birthday
+
+        self.save_user()
+
+    # ================= ABOUT =================
+
+    def about_screen(self, stdscr):
+
+        while True:
+            stdscr.clear()
+            stdscr.addstr(2, 2, "About PythOS", curses.A_BOLD)
+            stdscr.addstr(4, 4, f"Version: {self.VERSION}")
+            stdscr.addstr(5, 4, "Developer: KiteosOff")
+
+            stdscr.addstr(7, 4, "U = Check for updates")
+            stdscr.addstr(8, 4, "ESC = Back")
+
+            stdscr.refresh()
+            key = stdscr.getch()
+
+            if key == 27:
+                break
+
+            elif key in (ord('u'), ord('U')):
+                stdscr.addstr(10, 4, "Checking...")
+                stdscr.refresh()
+                time.sleep(1)
 
     # ================= MAIN =================
 
@@ -263,6 +327,10 @@ class PythOS:
                     self.timer_screen(stdscr)
                 elif choice == "Calculator":
                     self.calculator_screen(stdscr)
+                elif choice == "User Config":
+                    self.user_config_screen(stdscr)
+                elif choice == "About":
+                    self.about_screen(stdscr)
                 elif choice == "Exit":
                     return
 
