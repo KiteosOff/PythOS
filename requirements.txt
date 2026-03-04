@@ -1,0 +1,1 @@
+Before starting PythOS, you need to install curses. If it's not done, type python -m pip install windows-curses in Windows CMD
