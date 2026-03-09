@@ -1,9 +1,10 @@
 import os
 import time
-import hashlib
 import sys
+import hashlib
 import winsound
-from colorama import Fore, Style, init
+import datetime
+from colorama import Fore, Back, Style, init
 
 init()
 
@@ -12,12 +13,16 @@ VERSION = "1.4.6SE"
 BOOT_SOUND = "pythos_boot.wav"
 FAIL_SOUND = "pythos_bootfailure.wav"
 
-# ========================
+# ======================
 # UTIL
-# ========================
+# ======================
 
 def clear():
     os.system("cls" if os.name == "nt" else "clear")
+
+def play(sound):
+    if os.path.exists(sound):
+        winsound.PlaySound(sound, winsound.SND_FILENAME)
 
 def slow(text, speed=0.015):
     for c in text:
@@ -25,13 +30,20 @@ def slow(text, speed=0.015):
         time.sleep(speed)
     print()
 
-def play(sound):
-    if os.path.exists(sound):
-        winsound.PlaySound(sound, winsound.SND_FILENAME)
+# ======================
+# ANNIVERSAIRE
+# ======================
 
-# ========================
-# LOGO ASCII
-# ========================
+def is_birthday():
+
+    today = datetime.datetime.now()
+
+    # modifie ici la date
+    return today.month == 5 and today.day == 5
+
+# ======================
+# LOGO
+# ======================
 
 def show_logo():
 
@@ -44,45 +56,49 @@ def show_logo():
 "╚═╝        ╚═╝      ╚═╝   ╚═╝  ╚═╝ ╚═════╝ ╚══════╝"
 ]
 
+    color = Fore.YELLOW if is_birthday() else Fore.CYAN
+
     print()
 
     for line in logo:
-        print(Fore.CYAN + line + Style.RESET_ALL)
+        print(color + line)
         time.sleep(0.08)
 
-    print(Fore.GREEN + "\nExperimental Python Operating Shell\n" + Style.RESET_ALL)
+    print(Style.RESET_ALL)
 
-# ========================
+    if is_birthday():
+        print(Fore.YELLOW + "🎂 Happy Birthday from PythOS!\n")
+
+# ======================
 # SIGNATURE
-# ========================
+# ======================
 
 def verify_signature():
     try:
         with open(sys.argv[0], "rb") as f:
-            data = f.read()
-            hashlib.sha256(data).hexdigest()
+            hashlib.sha256(f.read()).hexdigest()
         return True
     except:
         return False
 
-# ========================
+# ======================
 # BOOT FAILURE
-# ========================
+# ======================
 
 def boot_fail():
 
     clear()
     play(FAIL_SOUND)
 
-    print(Fore.RED + "\nBOOT FAILURE")
-    print("System halted." + Style.RESET_ALL)
+    print(Fore.RED + "BOOT FAILURE")
+    print("System halted.")
 
-    input("\nPress ENTER to exit.")
+    input("Press ENTER")
     sys.exit()
 
-# ========================
+# ======================
 # BOOT
-# ========================
+# ======================
 
 def boot():
 
@@ -90,9 +106,9 @@ def boot():
 
     play(BOOT_SOUND)
 
-    slow("Initializing firmware...", 0.01)
-    slow("Checking memory........OK", 0.01)
-    slow("Loading system...", 0.01)
+    slow("Initializing firmware...",0.01)
+    slow("Checking memory........OK",0.01)
+    slow("Loading system...",0.01)
 
     if not verify_signature():
         boot_fail()
@@ -101,157 +117,230 @@ def boot():
 
     print(Fore.CYAN + "Welcome to")
     print("====== PythOS ======")
-    print("Version", VERSION + Style.RESET_ALL)
-    print()
+    print("Version", VERSION)
+    print(Style.RESET_ALL)
 
     time.sleep(1)
 
-# ========================
+# ======================
 # CALCULATOR
-# ========================
+# ======================
 
 def calculator():
 
     clear()
 
-    print(Fore.YELLOW + "PythOS Calculator")
-    print("Type 'exit' to return\n" + Style.RESET_ALL)
+    print(Fore.YELLOW + "Calculator\n")
 
     while True:
 
         expr = input("calc> ")
 
-        if expr.lower() == "exit":
+        if expr == "exit":
             break
 
         try:
             print("=", eval(expr))
         except:
-            print("Invalid expression")
+            print("Invalid")
 
-# ========================
+# ======================
+# TIMER
+# ======================
+
+def timer():
+
+    clear()
+
+    seconds = int(input("Seconds: "))
+
+    while seconds > 0:
+
+        print("Time left:", seconds)
+        time.sleep(1)
+        seconds -= 1
+
+    print("Time's up!")
+
+    input()
+
+# ======================
+# NOTES
+# ======================
+
+def notes():
+
+    clear()
+
+    print("Write note (type SAVE to finish)\n")
+
+    text = []
+
+    while True:
+
+        line = input()
+
+        if line == "SAVE":
+            break
+
+        text.append(line)
+
+    with open("pythos_notes.txt","w") as f:
+        for l in text:
+            f.write(l+"\n")
+
+    print("Saved.")
+
+    input()
+
+# ======================
 # SYSTEM INFO
-# ========================
+# ======================
 
 def system_info():
 
     clear()
 
-    print(Fore.GREEN + "System Information\n" + Style.RESET_ALL)
+    print(Fore.GREEN + "System Info\n")
 
-    print("OS:", "PythOS")
-    print("Version:", VERSION)
-    print("Python:", sys.version.split()[0])
-    print("Platform:", sys.platform)
+    print("OS: PythOS")
+    print("Version:",VERSION)
+    print("Python:",sys.version.split()[0])
+    print("Platform:",sys.platform)
 
-    input("\nPress ENTER to return")
+    input()
 
-# ========================
+# ======================
 # UPDATES
-# ========================
+# ======================
 
 def updates():
 
     clear()
 
-    print("Checking for updates...\n")
+    print("Checking updates...\n")
+
     time.sleep(1)
 
-    latest = "1.4.6SE"
+    print(Fore.GREEN + "System up to date.")
 
-    if latest == VERSION:
-        print(Fore.GREEN + "System up to date." + Style.RESET_ALL)
-    else:
-        print(Fore.YELLOW + "Update available:", latest + Style.RESET_ALL)
+    input()
 
-    input("\nPress ENTER to return")
+# ======================
+# MENU NAVIGATION
+# ======================
 
-# ========================
-# TOOLS MENU
-# ========================
+import msvcrt
+
+def arrow_menu(title, options):
+
+    index = 0
+
+    while True:
+
+        clear()
+
+        print(Fore.CYAN + title + "\n")
+
+        for i,opt in enumerate(options):
+
+            if i == index:
+                print(Back.WHITE + Fore.BLACK + opt + Style.RESET_ALL)
+            else:
+                print(Fore.CYAN + opt)
+
+        key = msvcrt.getch()
+
+        if key == b'H':   # up
+            index = (index - 1) % len(options)
+
+        elif key == b'P': # down
+            index = (index + 1) % len(options)
+
+        elif key == b'\r':
+            return index
+
+# ======================
+# TOOLS
+# ======================
 
 def tools():
 
     while True:
 
-        clear()
+        choice = arrow_menu("Tools",[
+            "Calculator",
+            "Timer",
+            "Notes",
+            "System Info",
+            "Back"
+        ])
 
-        print(Fore.MAGENTA + "PythOS Tools\n" + Style.RESET_ALL)
-
-        print("1 - Calculator")
-        print("2 - System Info")
-        print("3 - Back")
-        print()
-
-        c = input("> ")
-
-        if c == "1":
+        if choice == 0:
             calculator()
 
-        elif c == "2":
+        elif choice == 1:
+            timer()
+
+        elif choice == 2:
+            notes()
+
+        elif choice == 3:
             system_info()
 
-        elif c == "3":
-            break
+        elif choice == 4:
+            return
 
-# ========================
+# ======================
 # ABOUT
-# ========================
+# ======================
 
 def about():
 
     clear()
 
-    print(Fore.CYAN + "About PythOS\n" + Style.RESET_ALL)
+    print(Fore.CYAN + "About\n")
 
     print("PythOS Experimental System")
-    print("Version:", VERSION)
+    print("Version:",VERSION)
     print("Edition: Stable Edition")
-    print()
-    print("Designed by Kiteos Labs")
+    print("\nDesigned by Kiteos Labs")
 
-    input("\nPress ENTER to return")
+    input()
 
-# ========================
+# ======================
 # MAIN MENU
-# ========================
+# ======================
 
 def menu():
 
     while True:
 
-        clear()
+        choice = arrow_menu("PythOS "+VERSION,[
+            "Tools",
+            "Check Updates",
+            "About",
+            "Shutdown"
+        ])
 
-        print(Fore.CYAN + "PythOS", VERSION + Style.RESET_ALL)
-        print("----------------------")
-
-        print("1 - Tools")
-        print("2 - Check for updates")
-        print("3 - About")
-        print("4 - Shutdown")
-        print()
-
-        choice = input("> ")
-
-        if choice == "1":
+        if choice == 0:
             tools()
 
-        elif choice == "2":
+        elif choice == 1:
             updates()
 
-        elif choice == "3":
+        elif choice == 2:
             about()
 
-        elif choice == "4":
-
+        elif choice == 3:
             clear()
             print("Shutting down PythOS...")
             time.sleep(1)
             break
 
-# ========================
+# ======================
 # MAIN
-# ========================
+# ======================
 
 if __name__ == "__main__":
 
