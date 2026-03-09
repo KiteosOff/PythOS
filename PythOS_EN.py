@@ -4,8 +4,8 @@ import hashlib
 import winsound
 import sys
 
-VERSION = "1.4.4-BSE"
-BUILD_ID = "042"
+VERSION = "1.4.5SE"
+BUILD_ID = "043"
 
 BOOT_SOUND = "pythos_boot.wav"
 FAIL_SOUND = "pythos_bootfailure.wav"
@@ -163,3 +163,4 @@ if __name__ == "__main__":
 
     if boot_screen():
         shell()
+
