@@ -1,1 +1,1 @@
-Before starting PythOS, you need to install curses. If it's not done, type python -m pip install windows-curses in Windows CMD
+Before starting PythOS, you need to install curses and colorama. If it's not done, type python -m pip install windows-curses in Windows CMD and pip install colorama
